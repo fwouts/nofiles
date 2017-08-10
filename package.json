@@ -1,0 +1,30 @@
+{
+  "name": "nofiles",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rimraf dist && tsc",
+    "test": "mocha --opts mocha.opts && rm -rf test",
+    "test:live": "nodemon -e ts --exec 'time npm run test || exit 1'"
+  },
+  "author": "Francois Wouts",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chai": "^4.0.2",
+    "@types/mocha": "^2.2.41",
+    "@types/node": "^8.0.20",
+    "chai": "^4.1.1",
+    "mocha": "^3.5.0",
+    "nodemon": "^1.11.0",
+    "rimraf": "^2.6.1",
+    "ts-node": "^3.3.0",
+    "typescript": "^2.4.2"
+  },
+  "dependencies": {
+    "textbuilder": "^1.0.2"
+  }
+}
