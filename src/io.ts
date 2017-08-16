@@ -54,20 +54,28 @@ export function generate(
   }
 }
 
-export function read(sourcePath: string): VirtualDirectory | VirtualFile {
+export function read(
+  sourcePath: string
+): VirtualDirectory | VirtualFile | null {
   if (!fs.existsSync(sourcePath)) {
     throw new Error(`No file at ${sourcePath}`);
   }
   let lstat = fs.lstatSync(sourcePath);
   if (lstat.isDirectory()) {
     let directory = VirtualDirectory.builder();
-    for (let child of fs.readdirSync(sourcePath)) {
-      let childDestinationPath = path.join(sourcePath, child);
-      directory.addChild(child, read(childDestinationPath));
+    for (let childName of fs.readdirSync(sourcePath)) {
+      let childDestinationPath = path.join(sourcePath, childName);
+      let child = read(childDestinationPath);
+      if (child) {
+        directory.addChild(childName, child);
+      }
     }
     return directory.build();
   } else if (lstat.isFile()) {
     return new VirtualFile(fs.readFileSync(sourcePath));
+  } else if (lstat.isSymbolicLink()) {
+    // Symbolic links are ignored.
+    return null;
   } else {
     throw new Error(`Unsupported path: ${sourcePath}`);
   }
