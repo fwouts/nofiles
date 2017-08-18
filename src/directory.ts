@@ -6,14 +6,14 @@ class VirtualDirectory {
     return new VirtualDirectory.Builder();
   }
 
-  private _children: { [key: string]: VirtualFile | VirtualDirectory };
+  private _children: Map<string, VirtualFile | VirtualDirectory>;
 
-  constructor(children: { [key: string]: VirtualFile | VirtualDirectory }) {
-    this._children = Object.assign({}, children);
+  constructor(children: Map<string, VirtualFile | VirtualDirectory>) {
+    this._children = new Map(children);
   }
 
-  list(): { [key: string]: VirtualFile | VirtualDirectory } {
-    return Object.assign({}, this._children);
+  list(): Map<string, VirtualFile | VirtualDirectory> {
+    return new Map(this._children);
   }
 
   merged(other: VirtualDirectory): VirtualDirectory {
@@ -35,8 +35,7 @@ class VirtualDirectory {
     depth: number,
     opts: {}
   ): void {
-    for (let childName of Object.keys(this._children).sort()) {
-      let child = this._children[childName];
+    for (let [childName, child] of this._children.entries()) {
       if (child instanceof VirtualFile) {
         textBuilder.append(`${childName}\n`);
       } else {
@@ -77,7 +76,7 @@ class VirtualDirectory {
     if (slashPosition > -1) {
       let rootName = path.substr(0, slashPosition);
       let remainingPath = path.substr(slashPosition + 1);
-      let child = rootDirectory.list()[rootName];
+      let child = rootDirectory.list().get(rootName);
       if (child instanceof VirtualDirectory) {
         return this.unwrap(remainingPath, child);
       } else if (!child) {
@@ -86,7 +85,7 @@ class VirtualDirectory {
         throw new Error(`Expected a directory, found a file: '${rootName}'`);
       }
     } else {
-      let child = rootDirectory.list()[path];
+      let child = rootDirectory.list().get(path);
       if (!child) {
         throw new Error(`No such file or directory: '${path}'`);
       }
@@ -96,24 +95,26 @@ class VirtualDirectory {
 
   static merged(...directories: VirtualDirectory[]): VirtualDirectory {
     // TODO: Consider failing on conflict.
-    let mergedChildren: { [key: string]: VirtualFile | VirtualDirectory } = {};
+    let mergedChildren: Map<string, VirtualFile | VirtualDirectory> = new Map();
     for (let directory of directories) {
-      for (let childName of Object.keys(directory._children)) {
-        let child = directory._children[childName];
+      for (let [childName, child] of directory._children.entries()) {
         if (child instanceof VirtualFile) {
-          if (mergedChildren[childName] instanceof VirtualDirectory) {
+          if (mergedChildren.get(childName) instanceof VirtualDirectory) {
             throw new Error("Cannot merge file into directory");
           }
-          mergedChildren[childName] = child;
+          mergedChildren.set(childName, child);
         } else if (child instanceof VirtualDirectory) {
-          if (mergedChildren[childName] instanceof VirtualFile) {
+          if (mergedChildren.get(childName) instanceof VirtualFile) {
             throw new Error("Cannot merge directory into file");
-          } else if (mergedChildren[childName] instanceof VirtualDirectory) {
-            mergedChildren[childName] = (mergedChildren[
-              childName
-            ] as VirtualDirectory).merged(child);
+          } else if (
+            mergedChildren.get(childName) instanceof VirtualDirectory
+          ) {
+            mergedChildren.set(
+              childName,
+              (mergedChildren.get(childName) as VirtualDirectory).merged(child)
+            );
           } else {
-            mergedChildren[childName] = child;
+            mergedChildren.set(childName, child);
           }
         } else {
           throw new Error();
@@ -126,10 +127,10 @@ class VirtualDirectory {
 
 namespace VirtualDirectory {
   export class Builder {
-    private _children: { [key: string]: VirtualFile | VirtualDirectory };
+    private _children: Map<string, VirtualFile | VirtualDirectory>;
 
     constructor() {
-      this._children = {};
+      this._children = new Map();
     }
 
     addFile(name: string, f: VirtualFile | string): VirtualDirectory.Builder {
@@ -150,10 +151,10 @@ namespace VirtualDirectory {
       name: string,
       child: VirtualFile | VirtualDirectory
     ): VirtualDirectory.Builder {
-      if (name in this._children) {
+      if (this._children.has(name)) {
         throw new Error("Conflicting names: " + name);
       }
-      this._children[name] = child;
+      this._children.set(name, child);
       return this;
     }
 

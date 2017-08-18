@@ -7,14 +7,14 @@ import { expect } from "chai";
 describe("VirtualDirectory", () => {
   it("should not let users change files after creating", () => {
     // Create a directory with no files.
-    let files: { [key: string]: VirtualFile | VirtualDirectory } = {};
+    let files: Map<string, VirtualFile | VirtualDirectory> = new Map();
     let directory = new VirtualDirectory(files);
 
     // Add a new file to the hashmap.
-    files["new"] = new VirtualFile("should be excluded");
+    files.set("new", new VirtualFile("should be excluded"));
 
     // Ensure that it was not added to the directory.
-    expect(directory.list()).to.eql({});
+    expect(directory.list().size).to.eq(0);
   });
 
   describe("toString", () => {
@@ -336,10 +336,9 @@ describe("VirtualDirectory", () => {
         .addFile("file1", file1)
         .addFile("file2", file2)
         .build();
-      expect(directory.list()).to.eql({
-        file1: file1,
-        file2: file2
-      });
+      expect(directory.list()).to.eql(
+        new Map().set("file1", file1).set("file2", file2)
+      );
     });
     it("adds directories", () => {
       let dir1 = VirtualDirectory.builder().build();
@@ -348,10 +347,9 @@ describe("VirtualDirectory", () => {
         .addDirectory("dir1", dir1)
         .addDirectory("dir2", dir2)
         .build();
-      expect(directory.list()).to.eql({
-        dir1: dir1,
-        dir2: dir2
-      });
+      expect(directory.list()).to.eql(
+        new Map().set("dir1", dir1).set("dir2", dir2)
+      );
     });
     it("rejects duplicates", () => {
       expect(() => {

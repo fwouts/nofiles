@@ -22,8 +22,7 @@ export function generate(
     fs.mkdirSync(destinationPath);
   }
   let list = directory.list();
-  for (let name of Object.keys(list)) {
-    let child = list[name];
+  for (let [name, child] of list.entries()) {
     let childDestinationPath = path.join(destinationPath, name);
     if (child instanceof VirtualDirectory) {
       if (fs.existsSync(childDestinationPath)) {

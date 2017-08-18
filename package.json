@@ -1,11 +1,9 @@
 {
   "name": "nofiles",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
     "build": "rimraf dist && tsc",
     "test": "mocha --opts mocha.opts && rm -rf test",
