@@ -1,6 +1,7 @@
 import * as io from "./io";
 
-import VirtualDirectory from "./directory";
+import VirtualDirectory, { VirtualDirectoryBuilder } from "./directory";
+
 import VirtualFile from "./file";
 
-export { VirtualDirectory, VirtualFile, io };
+export { VirtualDirectory, VirtualDirectoryBuilder, VirtualFile, io };

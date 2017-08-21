@@ -1,9 +1,9 @@
 import TextBuilder from "textbuilder";
 import VirtualFile from "./file";
 
-class VirtualDirectory {
-  static builder(): VirtualDirectory.Builder {
-    return new VirtualDirectory.Builder();
+export class VirtualDirectory {
+  static builder(): VirtualDirectoryBuilder {
+    return new VirtualDirectoryBuilder();
   }
 
   private _children: Map<string, VirtualFile | VirtualDirectory>;
@@ -125,42 +125,40 @@ class VirtualDirectory {
   }
 }
 
-namespace VirtualDirectory {
-  export class Builder {
-    private _children: Map<string, VirtualFile | VirtualDirectory>;
+export class VirtualDirectoryBuilder {
+  private _children: Map<string, VirtualFile | VirtualDirectory>;
 
-    constructor() {
-      this._children = new Map();
-    }
+  constructor() {
+    this._children = new Map();
+  }
 
-    addFile(name: string, f: VirtualFile | string): VirtualDirectory.Builder {
-      let file =
-        f instanceof VirtualFile ? f : new VirtualFile(Buffer.from(f, "utf8"));
-      return this.addChild(name, file);
-    }
+  addFile(name: string, f: VirtualFile | string): VirtualDirectoryBuilder {
+    let file =
+      f instanceof VirtualFile ? f : new VirtualFile(Buffer.from(f, "utf8"));
+    return this.addChild(name, file);
+  }
 
-    addDirectory(
-      name: string,
-      d: VirtualDirectory | VirtualDirectory.Builder
-    ): VirtualDirectory.Builder {
-      let dir = d instanceof VirtualDirectory ? d : d.build();
-      return this.addChild(name, dir);
-    }
+  addDirectory(
+    name: string,
+    d: VirtualDirectory | VirtualDirectoryBuilder
+  ): VirtualDirectoryBuilder {
+    let dir = d instanceof VirtualDirectory ? d : d.build();
+    return this.addChild(name, dir);
+  }
 
-    addChild(
-      name: string,
-      child: VirtualFile | VirtualDirectory
-    ): VirtualDirectory.Builder {
-      if (this._children.has(name)) {
-        throw new Error("Conflicting names: " + name);
-      }
-      this._children.set(name, child);
-      return this;
+  addChild(
+    name: string,
+    child: VirtualFile | VirtualDirectory
+  ): VirtualDirectoryBuilder {
+    if (this._children.has(name)) {
+      throw new Error("Conflicting names: " + name);
     }
+    this._children.set(name, child);
+    return this;
+  }
 
-    build() {
-      return new VirtualDirectory(this._children);
-    }
+  build() {
+    return new VirtualDirectory(this._children);
   }
 }
 
