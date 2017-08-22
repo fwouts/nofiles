@@ -1,7 +1,17 @@
 import * as io from "./io";
 
-import VirtualDirectory, { VirtualDirectoryBuilder } from "./directory";
+import {
+  ImmutableDirectory,
+  ImmutableDirectoryBuilder,
+  MutableDirectory
+} from "./directory";
 
-import VirtualFile from "./file";
+import { ImmutableFile } from "./file";
 
-export { VirtualDirectory, VirtualDirectoryBuilder, VirtualFile, io };
+export {
+  ImmutableDirectory,
+  ImmutableDirectoryBuilder,
+  MutableDirectory,
+  ImmutableFile,
+  io
+};

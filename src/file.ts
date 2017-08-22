@@ -1,4 +1,4 @@
-export default class VirtualFile {
+export class ImmutableFile {
   private _buffer: Buffer;
 
   constructor(text: string | Buffer) {

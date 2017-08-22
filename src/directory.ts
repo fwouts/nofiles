@@ -1,23 +1,50 @@
+import { ImmutableFile } from "./file";
 import TextBuilder from "textbuilder";
-import VirtualFile from "./file";
 
-export class VirtualDirectory {
-  static builder(): VirtualDirectoryBuilder {
-    return new VirtualDirectoryBuilder();
+export type MutableDirectory = { [key: string]: string | MutableDirectory };
+
+export class ImmutableDirectory {
+  static builder(): ImmutableDirectoryBuilder {
+    return new ImmutableDirectoryBuilder();
   }
 
-  private _children: Map<string, VirtualFile | VirtualDirectory>;
+  private _children: Map<string, ImmutableFile | ImmutableDirectory>;
 
-  constructor(children: Map<string, VirtualFile | VirtualDirectory>) {
+  constructor(children: Map<string, ImmutableFile | ImmutableDirectory>) {
     this._children = new Map(children);
   }
 
-  list(): Map<string, VirtualFile | VirtualDirectory> {
+  static from(mutableDirectory: MutableDirectory): ImmutableDirectory {
+    let builder = ImmutableDirectory.builder();
+    for (let key of Object.keys(mutableDirectory)) {
+      let entry = mutableDirectory[key];
+      if (typeof entry == "string") {
+        builder.addFile(key, entry);
+      } else {
+        builder.addDirectory(key, this.from(entry));
+      }
+    }
+    return builder.build();
+  }
+
+  toMutable(): MutableDirectory {
+    let mutable: MutableDirectory = {};
+    for (let [name, child] of this._children.entries()) {
+      if (child instanceof ImmutableFile) {
+        mutable[name] = child.getBuffer().toString("utf8");
+      } else {
+        mutable[name] = child.toMutable();
+      }
+    }
+    return mutable;
+  }
+
+  list(): Map<string, ImmutableFile | ImmutableDirectory> {
     return new Map(this._children);
   }
 
-  merged(other: VirtualDirectory): VirtualDirectory {
-    return VirtualDirectory.merged(this, other);
+  merged(other: ImmutableDirectory): ImmutableDirectory {
+    return ImmutableDirectory.merged(this, other);
   }
 
   toString(): string {
@@ -36,7 +63,7 @@ export class VirtualDirectory {
     opts: {}
   ): void {
     for (let [childName, child] of this._children.entries()) {
-      if (child instanceof VirtualFile) {
+      if (child instanceof ImmutableFile) {
         textBuilder.append(`${childName}\n`);
       } else {
         textBuilder.append(`${childName}/`);
@@ -54,30 +81,30 @@ export class VirtualDirectory {
 
   static wrap(
     path: string,
-    terminalNode: VirtualDirectory | VirtualFile
-  ): VirtualDirectory {
+    terminalNode: ImmutableDirectory | ImmutableFile
+  ): ImmutableDirectory {
     let slashPosition = path.indexOf("/");
     if (slashPosition > -1) {
       let rootName = path.substr(0, slashPosition);
       let remainingPath = path.substr(slashPosition + 1);
-      return VirtualDirectory.builder()
+      return ImmutableDirectory.builder()
         .addDirectory(rootName, this.wrap(remainingPath, terminalNode))
         .build();
     } else {
-      return VirtualDirectory.builder().addChild(path, terminalNode).build();
+      return ImmutableDirectory.builder().addChild(path, terminalNode).build();
     }
   }
 
   static unwrap(
     path: string,
-    rootDirectory: VirtualDirectory
-  ): VirtualDirectory | VirtualFile {
+    rootDirectory: ImmutableDirectory
+  ): ImmutableDirectory | ImmutableFile {
     let slashPosition = path.indexOf("/");
     if (slashPosition > -1) {
       let rootName = path.substr(0, slashPosition);
       let remainingPath = path.substr(slashPosition + 1);
       let child = rootDirectory.list().get(rootName);
-      if (child instanceof VirtualDirectory) {
+      if (child instanceof ImmutableDirectory) {
         return this.unwrap(remainingPath, child);
       } else if (!child) {
         throw new Error(`No such directory: '${rootName}'`);
@@ -93,25 +120,30 @@ export class VirtualDirectory {
     }
   }
 
-  static merged(...directories: VirtualDirectory[]): VirtualDirectory {
+  static merged(...directories: ImmutableDirectory[]): ImmutableDirectory {
     // TODO: Consider failing on conflict.
-    let mergedChildren: Map<string, VirtualFile | VirtualDirectory> = new Map();
+    let mergedChildren: Map<
+      string,
+      ImmutableFile | ImmutableDirectory
+    > = new Map();
     for (let directory of directories) {
       for (let [childName, child] of directory._children.entries()) {
-        if (child instanceof VirtualFile) {
-          if (mergedChildren.get(childName) instanceof VirtualDirectory) {
+        if (child instanceof ImmutableFile) {
+          if (mergedChildren.get(childName) instanceof ImmutableDirectory) {
             throw new Error("Cannot merge file into directory");
           }
           mergedChildren.set(childName, child);
-        } else if (child instanceof VirtualDirectory) {
-          if (mergedChildren.get(childName) instanceof VirtualFile) {
+        } else if (child instanceof ImmutableDirectory) {
+          if (mergedChildren.get(childName) instanceof ImmutableFile) {
             throw new Error("Cannot merge directory into file");
           } else if (
-            mergedChildren.get(childName) instanceof VirtualDirectory
+            mergedChildren.get(childName) instanceof ImmutableDirectory
           ) {
             mergedChildren.set(
               childName,
-              (mergedChildren.get(childName) as VirtualDirectory).merged(child)
+              (mergedChildren.get(childName) as ImmutableDirectory).merged(
+                child
+              )
             );
           } else {
             mergedChildren.set(childName, child);
@@ -121,35 +153,37 @@ export class VirtualDirectory {
         }
       }
     }
-    return new VirtualDirectory(mergedChildren);
+    return new ImmutableDirectory(mergedChildren);
   }
 }
 
-export class VirtualDirectoryBuilder {
-  private _children: Map<string, VirtualFile | VirtualDirectory>;
+export class ImmutableDirectoryBuilder {
+  private _children: Map<string, ImmutableFile | ImmutableDirectory>;
 
   constructor() {
     this._children = new Map();
   }
 
-  addFile(name: string, f: VirtualFile | string): VirtualDirectoryBuilder {
+  addFile(name: string, f: ImmutableFile | string): ImmutableDirectoryBuilder {
     let file =
-      f instanceof VirtualFile ? f : new VirtualFile(Buffer.from(f, "utf8"));
+      f instanceof ImmutableFile
+        ? f
+        : new ImmutableFile(Buffer.from(f, "utf8"));
     return this.addChild(name, file);
   }
 
   addDirectory(
     name: string,
-    d: VirtualDirectory | VirtualDirectoryBuilder
-  ): VirtualDirectoryBuilder {
-    let dir = d instanceof VirtualDirectory ? d : d.build();
+    d: ImmutableDirectory | ImmutableDirectoryBuilder
+  ): ImmutableDirectoryBuilder {
+    let dir = d instanceof ImmutableDirectory ? d : d.build();
     return this.addChild(name, dir);
   }
 
   addChild(
     name: string,
-    child: VirtualFile | VirtualDirectory
-  ): VirtualDirectoryBuilder {
+    child: ImmutableFile | ImmutableDirectory
+  ): ImmutableDirectoryBuilder {
     if (this._children.has(name)) {
       throw new Error("Conflicting names: " + name);
     }
@@ -158,8 +192,6 @@ export class VirtualDirectoryBuilder {
   }
 
   build() {
-    return new VirtualDirectory(this._children);
+    return new ImmutableDirectory(this._children);
   }
 }
-
-export default VirtualDirectory;

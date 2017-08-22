@@ -1,11 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import VirtualDirectory from "./directory";
-import VirtualFile from "./file";
+import { ImmutableDirectory } from "./directory";
+import { ImmutableFile } from "./file";
 
 export function generate(
-  directory: VirtualDirectory,
+  directory: ImmutableDirectory,
   destinationPath: string,
   replace = false
 ) {
@@ -24,7 +24,7 @@ export function generate(
   let list = directory.list();
   for (let [name, child] of list.entries()) {
     let childDestinationPath = path.join(destinationPath, name);
-    if (child instanceof VirtualDirectory) {
+    if (child instanceof ImmutableDirectory) {
       if (fs.existsSync(childDestinationPath)) {
         if (!fs.lstatSync(childDestinationPath).isDirectory()) {
           // Existing file is not a directory, delete it before creating directory.
@@ -55,13 +55,13 @@ export function generate(
 
 export function read(
   sourcePath: string
-): VirtualDirectory | VirtualFile | null {
+): ImmutableDirectory | ImmutableFile | null {
   if (!fs.existsSync(sourcePath)) {
     throw new Error(`No file at ${sourcePath}`);
   }
   let lstat = fs.lstatSync(sourcePath);
   if (lstat.isDirectory()) {
-    let directory = VirtualDirectory.builder();
+    let directory = ImmutableDirectory.builder();
     for (let childName of fs.readdirSync(sourcePath)) {
       let childDestinationPath = path.join(sourcePath, childName);
       let child = read(childDestinationPath);
@@ -71,7 +71,7 @@ export function read(
     }
     return directory.build();
   } else if (lstat.isFile()) {
-    return new VirtualFile(fs.readFileSync(sourcePath));
+    return new ImmutableFile(fs.readFileSync(sourcePath));
   } else if (lstat.isSymbolicLink()) {
     // Symbolic links are ignored.
     return null;
